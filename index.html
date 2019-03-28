@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+
+  <link rel="stylesheet" type="text/css" href="css/util.css">
+
+  <link rel="stylesheet" type="text/css" media="screen"
+    href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.1/css/bootstrap.min.css" />
+  <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css">
+  <link
+    href="//cdn.rawgit.com/Eonasdan/bootstrap-datetimepicker/e8bddc60e73c1ec2475f827be36e1957af72e2ea/build/css/bootstrap-datetimepicker.css"
+    rel="stylesheet">
+  <script type="text/javascript" src="//code.jquery.com/jquery-2.1.1.min.js"></script>
+  <script type="text/javascript" src="//maxcdn.bootstrapcdn.com/bootstrap/3.3.1/js/bootstrap.min.js"></script>
+  <script src="//cdnjs.cloudflare.com/ajax/libs/moment.js/2.9.0/moment-with-locales.js"></script>
+  <script
+    src="//cdn.rawgit.com/Eonasdan/bootstrap-datetimepicker/e8bddc60e73c1ec2475f827be36e1957af72e2ea/src/js/bootstrap-datetimepicker.js"></script>
+
+  <script src="accidentControl.js"></script>
+  <title>Google Maps Project</title>
+  <style>
+    .panel {
+      width: 100%;
+      color: #333333;
+      margin: 0 auto;
+      overflow: hidden;
+      padding: 0 0;
+      align-items: center;
+      justify-content: space-around;
+      display: flex;
+      float: none;
+    }
+
+    #map {
+      height: 500px;
+      width: 100%;
+    }
+
+    .form-control-borderless {
+      border: none;
+    }
+
+    .form-control-borderless:hover,
+    .form-control-borderless:active,
+    .form-control-borderless:focus {
+      border: none;
+      outline: none;
+      box-shadow: none;
+    }
+
+    .modal-header,
+    h4,
+    .close {
+      background-color: #056cc7;
+      color: white !important;
+      text-align: center;
+      font-size: 30px;
+    }
+
+    .modal-footer {
+      background-color: #f9f9f9;
+    }
+  </style>
+
+</head>
+
+<body>
+  <div class="container">
+    <div class="row">
+      <div class='col-sm-6'>
+        <div class="form-group">
+
+        </div>
+      </div>
+      <script type="text/javascript">
+        $(function () {
+          var today = new Date();
+          var date = today.getFullYear() + '-' + (today.getMonth() + 1) + '-' + today.getDate();
+          var time = today.getHours() + ":" + today.getMinutes() + ":" + today.getSeconds();
+          var dateTime = date + ' ' + time;
+
+          $('#datetimepicker1').datetimepicker({
+            format: 'DD/MM/YYYY HH:mm'
+
+          });
+        });
+      </script>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class=" m-t-20">
+      <div class="panel">
+        <form method="GET" style="width: 800px">
+          <div>
+            <div class="">
+              <div class="input-group">
+                <input type="text" class="form-control controls" placeholder="Search" id="txtSearch" />
+                <div class="input-group-btn">
+                  <button class="btn btn-primary" type="submit">
+                    <span class="glyphicon glyphicon-search"></span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+
+
+    <div id="map" class="m-t-20"></div>
+  </div>
+
+
+  <!-- Modal -->
+  <div class="modal fade" id="accidentModal" role="dialog">
+    <div class="modal-dialog">
+
+      <!-- Modal content-->
+      <div class="modal-content">
+        <div class="modal-header" style="padding:15px 20px;">
+          <button type="button" class="close" data-dismiss="modal">&times;</button>
+          <h4><span class="glyphicon glyphicon-bullhorn"></span> Kaza Bildirimi</h4>
+        </div>
+        <div class="modal-body" style="padding:40px 50px;">
+          <form role="form" onsubmit="return validateAll();" action="javascript:addAccident();">
+            <div class="form-group">
+              <label id="lblAccidentDateTime"><span class="glyphicon glyphicon-calendar"></span> Kaza Tarihi ve
+                Saati</label>
+              <div class='input-group date' id='datetimepicker1'>
+                <input type='text' class="form-control" id="txtAccidentDateTime" onkeydown="return false" />
+                <span class="input-group-addon">
+                  <span class="glyphicon glyphicon-calendar"></span>
+                </span>
+              </div>
+            </div>
+            <div class="form-group">
+              <label id="lblAccidentExplanation"><span class="glyphicon glyphicon-info-sign"></span> Kaza
+                Açıklaması</label>
+              <textarea rows="4" cols="50" class="form-control" id="txtAccidentExplanation"></textarea>
+            </div>
+            <div class="form-group">
+              <label id="lblEstimatedTime"><span class="glyphicon glyphicon-random"></span> Tahmini Yol Açılma
+                Süresi(Dakika)</label>
+              <input type="number" class="form-control" id="txtEstimatedTime">
+            </div>
+            <button type="submit" class="btn btn-primary btn-block"><span class=""></span>
+              Ekle</button>
+          </form>
+        </div>
+      </div>
+
+    </div>
+  </div>
+  <div id="txtAccidentLat" style="visibility: hidden"></div>
+  <div id="txtAccidentLng" style="visibility: hidden"></div>
+  <script>
+
+    $('#accidentModal').on('hidden.bs.modal', function (e) {
+      $(this)
+        .find("input,textarea")
+        .val('')
+        .end();
+      clearAll();
+    })
+
+    var map;
+    function initMap() {
+      map = new google.maps.Map(document.getElementById('map'), {
+        zoom: 10,
+        center: { lat: 40.979874, lng: 28.874323 }
+      });
+
+      var trafficLayer = new google.maps.TrafficLayer();
+      trafficLayer.setMap(map);
+
+      google.maps.event.addListener(map, 'click', function (event) {
+        var mLatLng = event.latLng;
+        document.getElementById('txtAccidentLat').innerHTML = mLatLng.lat();
+        document.getElementById('txtAccidentLng').innerHTML = mLatLng.lng();
+        $("#accidentModal").modal();
+      });
+
+      $.ajax({
+        url: "https://my-json-server.typicode.com/dijwarbozyel/locationdata/locations"
+      }).then(function (data) {
+
+        for (i = 0; i < data.length; i++) {
+          addMarker(data[i]);
+        }
+
+      });
+
+      function addMarker(properties) {
+        var marker = new google.maps.Marker({
+          map: map,
+          position: { lat: properties.location[0], lng: properties.location[1] },
+          icon: {
+            url: "images/markers/svg/Work_4.svg",
+            scaledSize: new google.maps.Size(64, 64)
+          }
+        });
+
+        var infoWindow = new google.maps.InfoWindow({
+          content: '<div id="content"><h6>' + properties.name + '</h6></div>'
+        });
+
+        marker.addListener('click', function () {
+          infoWindow.open(map, marker);
+          map.setZoom(14);
+          map.setCenter(marker.getPosition());
+        });
+
+      }
+      /**/
+
+      initAutocomplete();
+      /**/
+
+
+    }
+    function initAutocomplete() {
+
+      var input = document.getElementById('txtSearch');
+      var searchBox = new google.maps.places.SearchBox(input);
+      map.addListener('bounds_changed', function () {
+        searchBox.setBounds(map.getBounds());
+      });
+
+      searchBox.addListener('places_changed', function () {
+        var places = searchBox.getPlaces();
+
+        if (places.length == 0) {
+          return;
+        }
+
+
+        var bounds = new google.maps.LatLngBounds();
+        places.forEach(function (place) {
+          if (!place.geometry) {
+            console.log("Returned place contains no geometry");
+            return;
+          }
+
+          if (place.geometry.viewport) {
+
+            bounds.union(place.geometry.viewport);
+          } else {
+            bounds.extend(place.geometry.location);
+          }
+        });
+        map.fitBounds(bounds);
+      });
+    }
+
+
+    function addAccident() {
+      var accidentDateTime = document.getElementById('txtAccidentDateTime').value;
+      var accidentExplanation = document.getElementById('txtAccidentExplanation').value;
+      var accidentEstimatedTime = document.getElementById('txtEstimatedTime').value;
+      var accidentLatLocation = parseFloat($("#txtAccidentLat").text());
+      var accidentLngLocation = parseFloat($("#txtAccidentLng").text());
+
+      var marker = new google.maps.Marker({
+        map: map,
+        position: { lat: accidentLatLocation, lng: accidentLngLocation },
+        icon: {
+          url: "images/markers/svg/Infos_7.svg",
+          scaledSize: new google.maps.Size(64, 64)
+        }
+      });
+
+      var infoWindow = new google.maps.InfoWindow({
+        content: '<div id="content"><h3>Trafik Kazası</h3><h5 class="firstHeading">' + accidentDateTime + ' tarihinde eklendi.</h5>' +
+          '<hr><div id="bodyContent"><p>' + accidentExplanation + '</p>' +
+          '<hr><p>Yol yaklaşık ' + accidentEstimatedTime + ' dakika içinde açılacaktır.'
+
+      });
+
+      marker.addListener('click', function () {
+        infoWindow.open(map, marker);
+        map.setZoom(14);
+        map.setCenter(marker.getPosition());
+      });
+      $('#accidentModal').modal('hide');
+    }
+
+  </script>
+  <script
+    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDIAG_rmSuPUG7ULn6cRtshD_wJyiJaQ70&libraries=places&callback=initMap"
+    async defer>
+    </script>
+</body>
+
+</html>
