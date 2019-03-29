@@ -70,7 +70,7 @@
 
 <body>
 
-  
+
   <div class="container">
     <div class="row">
       <div class='col-sm-6'>
@@ -97,13 +97,13 @@
   <div class="container">
     <div class=" m-t-20">
       <div class="panel">
-        <form method="GET" style="width: 800px">
+        <form method="GET" style="width: 800px" action="#">
           <div>
             <div class="">
               <div class="input-group">
                 <input type="text" class="form-control controls" placeholder="Search" id="txtSearch" />
                 <div class="input-group-btn">
-                  <button class="btn btn-primary" type="submit">
+                  <button class="btn btn-primary" type="submit" onclick='onSubmit();' id="submit">
                     <span class="glyphicon glyphicon-search"></span>
                   </button>
                 </div>
@@ -170,7 +170,7 @@
         .end();
       clearAll();
     })
-
+    
     var map;
     function initMap() {
       map = new google.maps.Map(document.getElementById('map'), {
@@ -187,6 +187,15 @@
         document.getElementById('txtAccidentLng').innerHTML = mLatLng.lng();
         $("#accidentModal").modal();
       });
+
+      var geocoder = new google.maps.Geocoder();
+
+      document.getElementById('submit').addEventListener('click', function () {
+        
+        geocodeAddress(geocoder);
+      });
+
+
 
       $.ajax({
         url: "https://my-json-server.typicode.com/dijwarbozyel/locationdata/locations"
@@ -226,17 +235,35 @@
 
 
     }
-    function initAutocomplete() {
+    function geocodeAddress(geocoder) {
+        var address = document.getElementById('txtSearch').value;
+        geocoder.geocode({address: address}, function(results, status) {
+      
+          if (status === 'OK') {
+            var bounds = new google.maps.LatLngBounds();
+            bounds.union(results[0].geometry.viewport);
+            map.fitBounds(bounds);
+          
+          } else {
+            alert('Geocode was not successful for the following reason: ' + status);
+          }
+        });
 
+
+
+      }
+
+    function initAutocomplete() {
+   
       var input = document.getElementById('txtSearch');
       var searchBox = new google.maps.places.SearchBox(input);
+
       map.addListener('bounds_changed', function () {
         searchBox.setBounds(map.getBounds());
       });
-
       searchBox.addListener('places_changed', function () {
         var places = searchBox.getPlaces();
-
+    
         if (places.length == 0) {
           return;
         }
@@ -250,7 +277,6 @@
           }
 
           if (place.geometry.viewport) {
-
             bounds.union(place.geometry.viewport);
           } else {
             bounds.extend(place.geometry.location);
